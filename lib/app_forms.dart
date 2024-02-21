@@ -1,7 +1,7 @@
 library app_forms;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+export 'package:flutter_form_builder/flutter_form_builder.dart';
+
+export 'src/app_form.dart';
+export 'src/app_form_field.dart';
+export 'src/widgets/app_form_builder.dart';
