@@ -6,10 +6,19 @@ class AppFormField<T> {
       GlobalKey<FormBuilderFieldState>();
   final String name;
   final String? Function(String?)? validations;
+
   T? initialValue;
+  T? value;
+
   AppFormField({required this.name, this.validations, this.initialValue});
 
-  setInitialValue(T? value) {
-    this.initialValue = value;
+  setValue(T? value) {
+    fieldKey.currentState?.didChange(value);
   }
+
+  reset() {
+    fieldKey.currentState?.reset();
+  }
+
+  FormBuilderState? get formState => fieldKey.currentState?.formState;
 }

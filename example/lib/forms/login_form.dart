@@ -1,12 +1,30 @@
 import 'dart:developer';
 
 import 'package:app_forms/app_forms.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 
 class LoginForm extends AppForm {
-  final email = AppFormField<int>(name: 'email', initialValue: 10);
+  @override
+  bool get autoValidate => true;
+
+  final email = AppFormField<String>(
+    name: 'email',
+    initialValue: '30',
+    validations: FormBuilderValidators.compose([
+      FormBuilderValidators.required(),
+      FormBuilderValidators.email(),
+    ]),
+  );
+
+  final password = AppFormField<String>(name: 'password', initialValue: 'test');
 
   LoginForm() {
-    email.setInitialValue(100);
+    setFields([email, password]);
+  }
+
+  updateEmailValue() {
+    email.value = 'error@email';
+    updateFieldsValue([email]);
   }
 
   @override

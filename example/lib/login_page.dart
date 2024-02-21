@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 class LoginPage extends StatelessWidget {
   final loginForm = LoginForm();
-  LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,13 +18,15 @@ class LoginPage extends StatelessWidget {
               children: [
                 FormBuilderTextField(
                   name: loginForm.email.name,
-                  key: loginForm.email.fieldKey,
                   validator: loginForm.email.validations,
-                  initialValue: loginForm.email.initialValue.toString(),
+                ),
+                FormBuilderTextField(
+                  name: loginForm.password.name,
+                  validator: loginForm.password.validations,
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    loginForm.email.fieldKey.currentState?.didChange(100);
+                    loginForm.submit();
                   },
                   child: Text('Submit'),
                 ),

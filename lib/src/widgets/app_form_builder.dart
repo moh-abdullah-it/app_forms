@@ -56,13 +56,6 @@ class AppFormBuilder extends StatelessWidget {
   /// {@macro flutter.widgets.form.autovalidateMode}
   final AutovalidateMode? autoValidateMode;
 
-  /// An optional Map of field initialValues. Keys correspond to the field's
-  /// name and value to the initialValue of the field.
-  ///
-  /// The initialValues set here will be ignored if the field has a local
-  /// initialValue set.
-  final Map<String, dynamic> initialValue;
-
   /// Whether the form should ignore submitting values from fields where
   /// `enabled` is `false`.
   ///
@@ -102,7 +95,6 @@ class AppFormBuilder extends StatelessWidget {
     this.onPopInvoked,
     this.canPop,
     this.autoValidateMode,
-    this.initialValue = const <String, dynamic>{},
     this.skipDisabled = false,
     this.enabled = true,
     this.clearValueOnUnregister = false,
@@ -112,11 +104,14 @@ class AppFormBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return FormBuilder(
       key: form.formKey,
-      onChanged: onChanged,
+      onChanged: () {
+        form.onChange();
+        onChanged?.call();
+      },
       onPopInvoked: onPopInvoked,
       canPop: canPop,
       autovalidateMode: autoValidateMode,
-      initialValue: initialValue,
+      initialValue: form.initialValue,
       skipDisabled: skipDisabled,
       enabled: enabled,
       clearValueOnUnregister: clearValueOnUnregister,
