@@ -1,9 +1,9 @@
 import 'package:app_forms/app_forms.dart';
 import 'package:flutter/material.dart';
 
-class AppFormBuilder extends StatelessWidget {
-  final AppForm form;
+typedef Builder<T extends AppForm> = Widget Function(T form);
 
+class AppFormBuilder<T extends AppForm> extends StatelessWidget {
   /// Called when one of the form fields changes.
   ///
   /// In addition to this callback being invoked, all the form fields themselves
@@ -48,7 +48,7 @@ class AppFormBuilder extends StatelessWidget {
   /// This is the root of the widget hierarchy that contains this form.
   ///
   /// {@macro flutter.widgets.child}
-  final Widget child;
+  //final Widget child;
 
   /// Used to enable/disable form fields auto validation and update their error
   /// text.
@@ -87,10 +87,12 @@ class AppFormBuilder extends StatelessWidget {
   /// This setting will have no effect when registering a field with the same
   /// name as the unregistered one.
   final bool clearValueOnUnregister;
+
+  final Builder<T> builder;
+
   const AppFormBuilder({
     super.key,
-    required this.form,
-    required this.child,
+    required this.builder,
     this.onChanged,
     this.onPopInvoked,
     this.canPop,
@@ -103,19 +105,19 @@ class AppFormBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FormBuilder(
-      key: form.formKey,
+      key: AppForms.get<T>().formKey,
       onChanged: () {
-        form.onChange();
+        AppForms.get<T>().onChange();
         onChanged?.call();
       },
       onPopInvoked: onPopInvoked,
       canPop: canPop,
       autovalidateMode: autoValidateMode,
-      initialValue: form.initialValue,
+      initialValue: AppForms.get<T>().initialValue,
       skipDisabled: skipDisabled,
       enabled: enabled,
       clearValueOnUnregister: clearValueOnUnregister,
-      child: child,
+      child: builder(AppForms.get<T>()),
     );
   }
 }

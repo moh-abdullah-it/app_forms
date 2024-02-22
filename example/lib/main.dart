@@ -1,7 +1,10 @@
+import 'package:app_forms/app_forms.dart';
+import 'package:example/forms/login_form.dart';
 import 'package:example/login_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
+  AppForms.injectForms([LoginForm()]);
   runApp(const MyApp());
 }
 
