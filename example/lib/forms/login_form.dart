@@ -24,7 +24,9 @@ class LoginForm extends AppForm {
   final password = AppFormField<String>(name: 'password', initialValue: 'test');
 
   LoginForm() {
+    setLoading();
     setFields([email, password]);
+    setLoading(false);
   }
 
   updateEmailValue() {

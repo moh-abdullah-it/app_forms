@@ -13,50 +13,54 @@ class LoginPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: AppFormBuilder<LoginForm>(
-          builder: (loginForm) {
-            return Column(
-              children: [
-                const SizedBox(
-                  height: 30,
-                ),
-                FormBuilderTextField(
-                  name: loginForm.email.name,
-                  validator: loginForm.email.validations,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    label: Text('Email'),
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                FormBuilderTextField(
-                  name: loginForm.password.name,
-                  validator: loginForm.password.validations,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    label: Text('Password'),
-                  ),
-                ),
-                const SizedBox(
-                  height: 30,
-                ),
-                AppFormListener<LoginForm>(
-                  builder: (form) {
-                    return ElevatedButton(
-                        onPressed: form.progressing
-                            ? null
-                            : () {
-                                loginForm.submit();
-                              },
-                        child: const Text('Submit'));
-                  },
-                ),
-              ],
-            );
-          },
+        child: Column(
+          children: [
+            AppFormBuilder<LoginForm>(
+              builder: (loginForm) {
+                return Column(
+                  children: [
+                    const SizedBox(
+                      height: 30,
+                    ),
+                    FormBuilderTextField(
+                      name: loginForm.email.name,
+                      validator: loginForm.email.validations,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        label: Text('Email'),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    FormBuilderTextField(
+                      name: loginForm.password.name,
+                      validator: loginForm.password.validations,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        label: Text('Password'),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                  ],
+                );
+              },
+            ),
+            AppFormListener<LoginForm>(
+              builder: (form) {
+                return ElevatedButton(
+                    onPressed: form.progressing
+                        ? null
+                        : () {
+                            form.submit();
+                          },
+                    child: Text('Submit ${form.email.value}'));
+              },
+            ),
+          ],
         ),
       ),
     );

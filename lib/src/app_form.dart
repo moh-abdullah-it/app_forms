@@ -11,6 +11,9 @@ abstract class AppForm {
   final _debouncer = Debouncer(milliseconds: 250);
 
   bool progressing = false;
+  bool loading = false;
+  bool hasErrors = false;
+  bool success = false;
 
   AppFormListener? _listener;
 
@@ -40,11 +43,14 @@ abstract class AppForm {
   }
 
   void submit() async {
-    _listener?.update();
+    hasErrors = false;
     progressing = true;
+    _listener?.update();
     if (saveAndValidate() ?? false) {
       await onSubmit(getValues());
-    } else {}
+    } else {
+      hasErrors = true;
+    }
     progressing = false;
     _listener?.update();
   }
@@ -82,6 +88,7 @@ abstract class AppForm {
   }
 
   void setValidationErrors(Map<String, dynamic>? errors) {
+    hasErrors = true;
     if (errors != null && errors.isNotEmpty) {
       errors.forEach((fieldKey, value) {
         var field = state?.fields[fieldKey];
@@ -133,5 +140,12 @@ abstract class AppForm {
     for (var field in _fields) {
       field.value = _values[field.name] ?? field.initialValue;
     }
+    _debouncer.run(() => _listener?.update());
   }
+
+  void setSuccess([bool success = true]) => this.success = success;
+
+  void setLoading([bool loading = true]) => this.loading = loading;
+
+  void setHasErrors([bool hasErrors = true]) => this.hasErrors = hasErrors;
 }
