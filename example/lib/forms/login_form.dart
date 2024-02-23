@@ -30,8 +30,8 @@ class LoginForm extends AppForm {
   }
 
   updateEmailValue() {
-    email.value = 'error@email';
-    updateFieldsValue([email]);
+    email.value = 'm@m.com';
+    updateFieldsValue();
   }
 
   @override

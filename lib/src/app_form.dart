@@ -81,9 +81,9 @@ abstract class AppForm {
     _setFieldsValue();
   }
 
-  void updateFieldsValue(List<AppFormField> fields) {
-    for (var element in fields) {
-      state?.fields[element.name]?.didChange(element.value);
+  void updateFieldsValue() {
+    for (var field in _fields) {
+      state?.fields[field.name]?.didChange(field.value);
     }
   }
 
