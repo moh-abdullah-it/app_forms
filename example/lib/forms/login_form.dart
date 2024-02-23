@@ -9,7 +9,7 @@ class LoginForm extends AppForm {
 
   final email = AppFormField<String>(
       name: 'email',
-      initialValue: '30',
+      initialValue: 'email@email.com',
       validations: FormBuilderValidators.compose([
         FormBuilderValidators.required(),
         FormBuilderValidators.email(),
@@ -34,6 +34,6 @@ class LoginForm extends AppForm {
 
   @override
   Future onSubmit(Map<String, dynamic>? values) async {
-    log('values $values');
+    await Future.delayed(const Duration(seconds: 3), () => log('values $values'));
   }
 }
