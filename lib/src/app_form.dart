@@ -16,6 +16,8 @@ abstract class AppForm {
 
   Future onSubmit(Map<String, dynamic>? values);
 
+  Future onValid(Map<String, dynamic>? values) async {}
+
   void onReset() {}
 
   bool? saveAndValidate({
@@ -34,6 +36,11 @@ abstract class AppForm {
     } else {}
   }
 
+  void reset() {
+    state?.reset();
+    onReset();
+  }
+
   void setFields(List<AppFormField> fields) {
     _fields = fields;
     for (var element in fields) {
@@ -47,6 +54,9 @@ abstract class AppForm {
       _autoValidate();
     } else {
       _listenFieldChange();
+    }
+    if (state?.isValid ?? false) {
+      onValid(getValues());
     }
   }
 
