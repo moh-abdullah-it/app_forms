@@ -7,9 +7,9 @@ class AppFormField<T> {
   final String name;
   final String? Function(String?)? validations;
 
-  final Function(FormBuilderFieldState? state)? onChange;
+  final Function(FormBuilderFieldState? filed)? onChange;
 
-  final Function(FormBuilderFieldState? state)? onValid;
+  final Function(FormBuilderFieldState? filed)? onValid;
 
   T? initialValue;
 

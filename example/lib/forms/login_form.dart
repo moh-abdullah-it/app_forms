@@ -14,11 +14,11 @@ class LoginForm extends AppForm {
         FormBuilderValidators.required(),
         FormBuilderValidators.email(),
       ]),
-      onChange: (state) {
-        log('email State Changed ${state?.value}');
+      onChange: (filed) {
+        log('email State Changed ${filed?.value}');
       },
-      onValid: (state) {
-        log('email Valid ${state?.value}');
+      onValid: (filed) {
+        log('email Valid ${filed?.value}');
       });
 
   final password = AppFormField<String>(name: 'password', initialValue: 'test');
@@ -34,6 +34,7 @@ class LoginForm extends AppForm {
 
   @override
   Future onSubmit(Map<String, dynamic>? values) async {
-    await Future.delayed(const Duration(seconds: 3), () => log('values $values'));
+    await Future.delayed(
+        const Duration(seconds: 3), () => log('values $values'));
   }
 }
