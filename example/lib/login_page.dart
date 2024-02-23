@@ -11,27 +11,48 @@ class LoginPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Login Page'),
       ),
-      body: AppFormBuilder<LoginForm>(
-        builder: (loginForm) {
-          return Column(
-            children: [
-              FormBuilderTextField(
-                name: loginForm.email.name,
-                validator: loginForm.email.validations,
-              ),
-              FormBuilderTextField(
-                name: loginForm.password.name,
-                validator: loginForm.password.validations,
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  loginForm.submit();
-                },
-                child: const Text('Submit'),
-              ),
-            ],
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: AppFormBuilder<LoginForm>(
+          builder: (loginForm) {
+            return Column(
+              children: [
+                const SizedBox(
+                  height: 30,
+                ),
+                FormBuilderTextField(
+                  name: loginForm.email.name,
+                  validator: loginForm.email.validations,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    label: Text('Email'),
+                  ),
+                ),
+                const SizedBox(
+                  height: 20,
+                ),
+                FormBuilderTextField(
+                  name: loginForm.password.name,
+                  validator: loginForm.password.validations,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    label: Text('Password'),
+                  ),
+                ),
+                const SizedBox(
+                  height: 30,
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    loginForm.submit();
+                  },
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
