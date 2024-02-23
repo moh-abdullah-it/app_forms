@@ -29,6 +29,11 @@ class LoginForm extends AppForm {
     setLoading(false);
   }
 
+  @override
+  onInit() async {
+    log('i init');
+  }
+
   updateEmailValue() {
     email.value = 'm@m.com';
     updateFieldsValue();

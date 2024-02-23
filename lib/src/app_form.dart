@@ -26,6 +26,8 @@ abstract class AppForm {
     return state?.value;
   }
 
+  Future onInit() async {}
+
   Future onSubmit(Map<String, dynamic>? values);
 
   Future onValid(Map<String, dynamic>? values) async {}

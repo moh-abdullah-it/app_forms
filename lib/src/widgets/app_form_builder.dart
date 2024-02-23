@@ -110,7 +110,10 @@ class AppFormBuilder<T extends AppForm> extends StatelessWidget {
         AppForms.get<T>().onChange();
         onChanged?.call();
       },
-      onPopInvoked: onPopInvoked,
+      onPopInvoked: (pop) {
+        AppForms.dispose<T>();
+        onPopInvoked?.call(pop);
+      },
       canPop: canPop,
       autovalidateMode: autoValidateMode,
       initialValue: AppForms.get<T>().initialValue,
