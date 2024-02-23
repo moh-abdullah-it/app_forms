@@ -14,11 +14,11 @@ class LoginForm extends AppForm {
         FormBuilderValidators.required(),
         FormBuilderValidators.email(),
       ]),
-      onChange: (filed) {
-        log('email State Changed ${filed?.value}');
+      onChange: (field) {
+        log('email State Changed ${field?.value}');
       },
-      onValid: (filed) {
-        log('email Valid ${filed?.value}');
+      onValid: (field) {
+        log('email Valid ${field?.value}');
       });
 
   final password = AppFormField<String>(name: 'password', initialValue: 'test');
