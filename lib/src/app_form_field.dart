@@ -7,10 +7,20 @@ class AppFormField<T> {
   final String name;
   final String? Function(String?)? validations;
 
+  final Function(FormBuilderFieldState? state)? onChange;
+
+  final Function(FormBuilderFieldState? state)? onValid;
+
   T? initialValue;
+
   T? value;
 
-  AppFormField({required this.name, this.validations, this.initialValue});
+  AppFormField(
+      {required this.name,
+      this.validations,
+      this.initialValue,
+      this.onChange,
+      this.onValid});
 
   setValue(T? value) {
     fieldKey.currentState?.didChange(value);

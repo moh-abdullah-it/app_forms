@@ -1,7 +1,7 @@
 import 'package:app_forms/app_forms.dart';
 import 'package:flutter/material.dart';
 
-typedef Builder<T extends AppForm> = Widget Function(T form);
+typedef WidgetBuilder<T extends AppForm> = Widget Function(T form);
 
 class AppFormBuilder<T extends AppForm> extends StatelessWidget {
   /// Called when one of the form fields changes.
@@ -88,7 +88,7 @@ class AppFormBuilder<T extends AppForm> extends StatelessWidget {
   /// name as the unregistered one.
   final bool clearValueOnUnregister;
 
-  final Builder<T> builder;
+  final WidgetBuilder<T> builder;
 
   const AppFormBuilder({
     super.key,

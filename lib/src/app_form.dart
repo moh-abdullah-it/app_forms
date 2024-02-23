@@ -8,9 +8,10 @@ abstract class AppForm {
 
   Map<String, dynamic> initialValue = {};
   final Map<String, dynamic> _values = {};
+  FormBuilderState? get state => formKey.currentState;
 
   Map<String, dynamic>? getValues() {
-    return formKey.currentState?.value;
+    return state?.value;
   }
 
   Future onSubmit(Map<String, dynamic>? values);
@@ -21,7 +22,7 @@ abstract class AppForm {
     bool focusOnInvalid = true,
     bool autoScrollWhenFocusOnInvalid = false,
   }) {
-    return formKey.currentState?.saveAndValidate(
+    return state?.saveAndValidate(
       focusOnInvalid: focusOnInvalid,
       autoScrollWhenFocusOnInvalid: autoScrollWhenFocusOnInvalid,
     );
@@ -44,19 +45,21 @@ abstract class AppForm {
   void onChange() {
     if (autoValidate) {
       _autoValidate();
+    } else {
+      _listenFieldChange();
     }
   }
 
   void updateFieldsValue(List<AppFormField> fields) {
     for (var element in fields) {
-      formKey.currentState?.fields[element.name]?.didChange(element.value);
+      state?.fields[element.name]?.didChange(element.value);
     }
   }
 
   void setValidationErrors(Map<String, dynamic>? errors) {
     if (errors != null && errors.isNotEmpty) {
       errors.forEach((fieldKey, value) {
-        var field = formKey.currentState?.fields[fieldKey];
+        var field = state?.fields[fieldKey];
         if (value is List) {
           field?.invalidate(value.first);
         }
@@ -68,13 +71,30 @@ abstract class AppForm {
   }
 
   void _autoValidate() {
-    for (var element in _fields) {
-      if (_values[element.name] !=
-          formKey.currentState?.instantValue[element.name]) {
-        _values[element.name] =
-            formKey.currentState?.instantValue[element.name];
-        formKey.currentState?.fields[element.name]?.validate();
+    for (var field in _fields) {
+      if (_values[field.name] != state?.instantValue[field.name]) {
+        _values[field.name] = state?.instantValue[field.name];
+        state?.fields[field.name]?.validate();
+        // call field
+        _callFiled(field);
       }
+    }
+  }
+
+  void _listenFieldChange() {
+    for (var field in _fields.where(
+        (element) => element.onChange != null || element.onValid != null)) {
+      if (_values[field.name] != state?.instantValue[field.name]) {
+        _values[field.name] = state?.instantValue[field.name];
+        _callFiled(field);
+      }
+    }
+  }
+
+  _callFiled(AppFormField field) {
+    field.onChange?.call(state?.fields[field.name]);
+    if (state?.fields[field.name]?.isValid ?? false) {
+      field.onValid?.call(state?.fields[field.name]);
     }
   }
 }

@@ -8,13 +8,18 @@ class LoginForm extends AppForm {
   bool get autoValidate => true;
 
   final email = AppFormField<String>(
-    name: 'email',
-    initialValue: '30',
-    validations: FormBuilderValidators.compose([
-      FormBuilderValidators.required(),
-      FormBuilderValidators.email(),
-    ]),
-  );
+      name: 'email',
+      initialValue: '30',
+      validations: FormBuilderValidators.compose([
+        FormBuilderValidators.required(),
+        FormBuilderValidators.email(),
+      ]),
+      onChange: (state) {
+        log('email State Changed ${state?.value}');
+      },
+      onValid: (state) {
+        log('email Valid ${state?.value}');
+      });
 
   final password = AppFormField<String>(name: 'password', initialValue: 'test');
 

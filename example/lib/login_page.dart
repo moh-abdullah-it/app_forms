@@ -27,7 +27,7 @@ class LoginPage extends StatelessWidget {
                 onPressed: () {
                   loginForm.submit();
                 },
-                child: Text('Submit'),
+                child: const Text('Submit'),
               ),
             ],
           );
