@@ -1,6 +1,6 @@
 name: app_forms
 description: "App Forms Separate the logic from the user interface by use flutter_form_builder"
-version: 0.6.0
+version: 0.7.0
 homepage: https://github.com/moh-abdullah-it/app_forms
 
 environment:
