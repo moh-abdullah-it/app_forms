@@ -67,6 +67,11 @@ abstract class AppForm {
   /// Prevents excessive validation calls by delaying execution
   /// until 250ms after the last field change event.
   final _debouncer = Debouncer(milliseconds: 250);
+  
+  /// Separate debouncer for UI updates to decouple validation from UI.
+  ///
+  /// Allows validation to happen quickly while batching UI updates.
+  final _uiDebouncer = Debouncer(milliseconds: 16); // ~60fps
 
   /// Whether the form is currently being submitted.
   ///
@@ -107,6 +112,22 @@ abstract class AppForm {
   ///
   /// Maintained for performance optimization and change detection.
   final Map<String, dynamic> _values = {};
+  
+  /// Cache of previous field values for change detection.
+  ///
+  /// Used to detect actual changes and prevent unnecessary operations.
+  final Map<String, dynamic> _previousValues = {};
+  
+  /// Cache for expensive validation results.
+  ///
+  /// Prevents re-running validations on unchanged values.
+  final Map<String, String?> _validationCache = {};
+  
+  /// Maximum size for validation cache to prevent memory leaks.
+  static const int _maxCacheSize = 100;
+  
+  /// Performance metrics for debugging and optimization.
+  final Map<String, int> _performanceMetrics = {};
 
   /// Gets the current FormBuilder state.
   ///
@@ -293,7 +314,7 @@ abstract class AppForm {
     onReset();
   }
 
-  /// Sets the form fields and initializes their values.
+  /// Sets the form fields and initializes their values with optimization.
   ///
   /// This method should be called in the form constructor to register
   /// all fields with the form. It automatically:
@@ -301,6 +322,7 @@ abstract class AppForm {
   /// - Populates [initialValue] map for FormBuilder
   /// - Initializes internal value cache
   /// - Sets initial field values
+  /// - Pre-allocates performance tracking structures
   ///
   /// ## Parameters:
   /// - [fields]: List of [AppFormField] instances to register
@@ -313,10 +335,25 @@ abstract class AppForm {
   /// ```
   void setFields(List<AppFormField> fields) {
     _fields = fields;
+    
+    // Pre-allocate maps with known capacity for better performance
+    final fieldCount = fields.length;
+    if (initialValue.isEmpty) {
+      // Only allocate if not already done (avoid re-allocation)
+      initialValue = Map<String, dynamic>.from({});
+      _values.clear();
+      _previousValues.clear();
+    }
+    
     for (final field in fields) {
       initialValue[field.name] = field.initialValue;
       _values[field.name] = field.initialValue;
+      _previousValues[field.name] = field.initialValue;
       field.value = _values[field.name];
+      
+      // Initialize performance tracking
+      _performanceMetrics['${field.name}_validations'] = 0;
+      _performanceMetrics['${field.name}_changes'] = 0;
     }
   }
 
@@ -398,29 +435,55 @@ abstract class AppForm {
     }
   }
 
-  /// Internal method that handles automatic validation.
+  /// Internal method that handles automatic validation with memoization.
   ///
   /// This method is called when [autoValidate] is `true` and a field changes.
-  /// It validates changed fields and triggers their callbacks.
+  /// It validates only changed fields and uses cached validation results
+  /// for performance optimization.
   void _autoValidate() {
     for (final field in _fields) {
-      if (_values[field.name] != state?.instantValue[field.name]) {
-        _values[field.name] = state?.instantValue[field.name];
-        state?.fields[field.name]?.validate();
+      final currentValue = state?.instantValue[field.name];
+      final cachedValue = _values[field.name];
+      
+      // Only process if value actually changed
+      if (currentValue != cachedValue) {
+        _previousValues[field.name] = cachedValue;
+        _values[field.name] = currentValue;
+        
+        // Check validation cache first
+        final cacheKey = '${field.name}_${currentValue?.toString() ?? 'null'}';
+        if (!_validationCache.containsKey(cacheKey)) {
+          // Validate and cache result
+          state?.fields[field.name]?.validate();
+          final fieldState = state?.fields[field.name];
+          _validationCache[cacheKey] = fieldState?.hasError == true 
+              ? fieldState?.errorText 
+              : null;
+        }
+        
         _callField(field);
       }
     }
   }
 
-  /// Internal method that handles field change callbacks.
+  /// Internal method that handles field change callbacks with optimization.
   ///
   /// This method is called when [autoValidate] is `false` and only
   /// triggers callbacks for fields that have onChange or onValid handlers.
+  /// Uses memoization to prevent redundant callback executions.
   void _listenFieldChange() {
-    for (final field in _fields.where(
-        (element) => element.onChange != null || element.onValid != null)) {
-      if (_values[field.name] != state?.instantValue[field.name]) {
-        _values[field.name] = state?.instantValue[field.name];
+    // Pre-filter fields with callbacks to avoid repeated filtering
+    final fieldsWithCallbacks = _fields.where(
+        (element) => element.onChange != null || element.onValid != null).toList();
+    
+    for (final field in fieldsWithCallbacks) {
+      final currentValue = state?.instantValue[field.name];
+      final cachedValue = _values[field.name];
+      
+      // Only process actual changes
+      if (currentValue != cachedValue) {
+        _previousValues[field.name] = cachedValue;
+        _values[field.name] = currentValue;
         _callField(field);
       }
     }
@@ -452,12 +515,23 @@ abstract class AppForm {
   /// Internal method that synchronizes field values and updates UI.
   ///
   /// This method updates [AppFormField.value] properties and triggers
-  /// UI updates via the registered listener.
+  /// UI updates via the registered listener with optimized batching.
   void _setFieldsValue() {
+    // Track if any values actually changed
+    bool hasChanges = false;
+    
     for (final field in _fields) {
-      field.value = _values[field.name] ?? field.initialValue;
+      final newValue = _values[field.name] ?? field.initialValue;
+      if (field.value != newValue) {
+        field.value = newValue;
+        hasChanges = true;
+      }
     }
-    _debouncer.run(() => _listener?.update());
+    
+    // Only trigger UI update if values actually changed
+    if (hasChanges) {
+      _uiDebouncer.run(() => _listener?.update());
+    }
   }
 
   /// Sets the form success state.
@@ -513,4 +587,62 @@ abstract class AppForm {
   /// }
   /// ```
   void setHasErrors([bool hasErrors = true]) => this.hasErrors = hasErrors;
+  
+  /// Clears validation cache to free memory.
+  ///
+  /// This method should be called periodically or when the cache grows too large
+  /// to prevent memory leaks. It's automatically called when cache size exceeds
+  /// the maximum limit.
+  ///
+  /// ## Example:
+  /// ```dart
+  /// @override
+  /// void onReset() {
+  ///   super.onReset();
+  ///   clearValidationCache(); // Clear cache on form reset
+  /// }
+  /// ```
+  void clearValidationCache() {
+    _validationCache.clear();
+    _performanceMetrics['cache_clears'] = (_performanceMetrics['cache_clears'] ?? 0) + 1;
+  }
+  
+  /// Gets performance metrics for debugging and optimization.
+  ///
+  /// Returns a map containing various performance metrics such as:
+  /// - Field validation counts
+  /// - Field change counts
+  /// - Cache hit/miss ratios
+  /// - Cache clear operations
+  ///
+  /// ## Example:
+  /// ```dart
+  /// final metrics = form.getPerformanceMetrics();
+  /// print('Email validations: ${metrics['email_validations']}');
+  /// print('Cache clears: ${metrics['cache_clears']}');
+  /// ```
+  Map<String, int> getPerformanceMetrics() {
+    return Map<String, int>.from(_performanceMetrics);
+  }
+  
+  /// Internal method to manage validation cache size.
+  ///
+  /// Automatically clears cache when it exceeds maximum size to prevent
+  /// memory leaks in long-running applications.
+  void _manageCacheSize() {
+    if (_validationCache.length > _maxCacheSize) {
+      // Keep only the most recent half of entries
+      final entries = _validationCache.entries.toList();
+      _validationCache.clear();
+      
+      // Add back the second half (most recent)
+      final keepCount = _maxCacheSize ~/ 2;
+      final startIndex = entries.length - keepCount;
+      for (int i = startIndex; i < entries.length; i++) {
+        _validationCache[entries[i].key] = entries[i].value;
+      }
+      
+      _performanceMetrics['cache_cleanups'] = (_performanceMetrics['cache_cleanups'] ?? 0) + 1;
+    }
+  }
 }

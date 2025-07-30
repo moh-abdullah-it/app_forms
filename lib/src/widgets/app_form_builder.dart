@@ -147,7 +147,7 @@ class AppFormBuilder<T extends AppForm> extends StatelessWidget {
   ///   autoValidateMode: AutovalidateMode.onUserInteraction,
   /// )
   /// ```
-  const AppFormBuilder({
+   AppFormBuilder({
     super.key,
     required this.builder,
     this.onChanged,
@@ -159,10 +159,23 @@ class AppFormBuilder<T extends AppForm> extends StatelessWidget {
     this.clearValueOnUnregister = false,
   });
 
+  /// Cached form instance to avoid repeated lookups.
+  T? _cachedForm;
+  
+  /// Cached initial values to detect if they changed.
+  Map<String, dynamic>? _cachedInitialValues;
+  
   @override
   Widget build(BuildContext context) {
-    // Get the form instance from the dependency injection system
-    final form = AppForms.get<T>();
+    // Use cached form instance or get new one
+    _cachedForm ??= AppForms.get<T>();
+    final form = _cachedForm!;
+    
+    // Check if initial values changed (rare but possible)
+    if (_cachedInitialValues == null || 
+        !_mapEquals(_cachedInitialValues!, form.initialValue)) {
+      _cachedInitialValues = Map<String, dynamic>.from(form.initialValue);
+    }
     
     return FormBuilder(
       key: form.formKey,
@@ -173,17 +186,32 @@ class AppFormBuilder<T extends AppForm> extends StatelessWidget {
         onChanged?.call();
       },
       onPopInvokedWithResult: (didPop, result) {
-        // Dispose form when navigation occurs
+        // Clear cache and dispose form when navigation occurs
+        _cachedForm = null;
+        _cachedInitialValues = null;
         AppForms.dispose<T>();
         onPopInvoked?.call(didPop);
       },
       canPop: canPop,
       autovalidateMode: autoValidateMode,
-      initialValue: form.initialValue,
+      initialValue: _cachedInitialValues!,
       skipDisabled: skipDisabled,
       enabled: enabled,
       clearValueOnUnregister: clearValueOnUnregister,
       child: builder(form),
     );
+  }
+  
+  /// Helper method to compare maps for equality.
+  bool _mapEquals(Map<String, dynamic> map1, Map<String, dynamic> map2) {
+    if (map1.length != map2.length) return false;
+    
+    for (final key in map1.keys) {
+      if (!map2.containsKey(key) || map1[key] != map2[key]) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 }

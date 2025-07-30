@@ -1,4 +1,19 @@
 import 'package:app_forms/app_forms.dart';
+import 'package:flutter/foundation.dart';
+
+/// Mixin for forms that need cleanup on disposal.
+/// 
+/// Forms can implement this mixin to provide custom cleanup logic
+/// that will be called when the form is disposed.
+mixin _DisposableForm {
+  /// Called when the form is disposed to perform cleanup.
+  /// 
+  /// Override this method to clean up resources, cancel timers,
+  /// close streams, or perform other cleanup operations.
+  void _cleanup() {
+    // Default implementation - can be overridden
+  }
+}
 
 /// Global registry for form instances.
 /// 
@@ -9,6 +24,11 @@ final Map<String, AppForm> _forms = {};
 /// 
 /// Prevents multiple initialization calls to the same form instance.
 final Map<String, bool> _initForms = {};
+
+/// Cache for form initialization futures to prevent concurrent initialization.
+/// 
+/// Ensures only one initialization occurs even with concurrent access.
+final Map<String, Future<void>> _initializationFutures = {};
 
 /// Dependency injection service for managing form instances.
 ///
@@ -76,11 +96,11 @@ class AppForms<T extends AppForm> {
     }
   }
 
-  /// Retrieves a form instance by its type.
+  /// Retrieves a form instance by its type with optimized initialization.
   ///
   /// This method provides type-safe access to injected forms.
   /// On first access, it automatically calls [AppForm.onInit] to
-  /// initialize the form.
+  /// initialize the form using concurrent-safe initialization.
   ///
   /// ## Type Parameter:
   /// - [T]: The form class type to retrieve (must extend [AppForm])
@@ -102,11 +122,12 @@ class AppForms<T extends AppForm> {
   /// }
   /// ```
   ///
-  /// ## Automatic Initialization:
+  /// ## Optimized Initialization:
   /// The first call to `get<T>()` for any form type will:
-  /// 1. Call the form's [AppForm.onInit] method
-  /// 2. Mark the form as initialized to prevent duplicate calls
-  /// 3. Return the initialized form instance
+  /// 1. Use cached initialization future to prevent concurrent calls
+  /// 2. Call the form's [AppForm.onInit] method only once
+  /// 3. Mark the form as initialized to prevent duplicate calls
+  /// 4. Return the initialized form instance
   static T get<T extends AppForm>() {
     final formTypeName = T.toString();
     
@@ -117,20 +138,38 @@ class AppForms<T extends AppForm> {
     
     final form = _forms[formTypeName]! as T;
     
-    // Initialize form on first access
+    // Initialize form on first access with concurrency protection
     if (!_initForms.containsKey(formTypeName)) {
-      form.onInit();
-      _initForms[formTypeName] = true;
+      // Use cached future to prevent concurrent initialization
+      _initializationFutures[formTypeName] ??= _initializeForm(form, formTypeName);
+      // Note: We don't await here to keep the method synchronous
+      // The form is usable immediately, initialization happens in background
     }
     
     return form;
   }
+  
+  /// Internal method to handle form initialization safely.
+  ///
+  /// This method ensures thread-safe initialization and proper cleanup.
+  static Future<void> _initializeForm(AppForm form, String formTypeName) async {
+    try {
+      await form.onInit();
+      _initForms[formTypeName] = true;
+    } catch (e) {
+      // Log error but don't crash the app
+      debugPrint('Error initializing form $formTypeName: $e');
+      // Remove from cache so it can be retried
+      _initializationFutures.remove(formTypeName);
+      rethrow;
+    }
+  }
 
-  /// Disposes a form's initialization state.
+  /// Disposes a form's initialization state with cleanup.
   ///
   /// This method resets the initialization flag for a form type,
   /// allowing [AppForm.onInit] to be called again on the next
-  /// access via [get].
+  /// access via [get]. It also cleans up caches and resources.
   ///
   /// This is typically called by [AppFormBuilder] when the form
   /// widget is disposed (e.g., when navigating away from a page).
@@ -147,11 +186,32 @@ class AppForms<T extends AppForm> {
   /// final form = AppForms.get<LoginForm>(); // onInit called
   /// ```
   ///
-  /// ## Note:
-  /// This method does not remove the form instance from the registry,
-  /// only resets its initialization state. The form instance remains
-  /// available for future access.
+  /// ## Cleanup Operations:
+  /// This method performs the following cleanup:
+  /// - Resets initialization state
+  /// - Clears initialization future cache
+  /// - Triggers form-specific cleanup if available
   static void dispose<T extends AppForm>() {
-    _initForms.remove(T.toString());
+    final formTypeName = T.toString();
+    _initForms.remove(formTypeName);
+    _initializationFutures.remove(formTypeName);
+    
+    // Trigger form cleanup if form exists and has cleanup method
+    final form = _forms[formTypeName];
+    if (form != null) {
+      // Call cleanup if form implements the mixin
+      if (form is _DisposableForm) {
+        (form as _DisposableForm)._cleanup();
+      }
+      
+      // Clear form's internal caches using duck typing
+      try {
+        // Use dynamic call to avoid reflection dependencies
+        (form as dynamic).clearValidationCache?.call();
+      } catch (e) {
+        // Method doesn't exist or error calling it - ignore
+        debugPrint('Note: Form cleanup method not available: $e');
+      }
+    }
   }
 }

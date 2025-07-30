@@ -7,6 +7,12 @@ import 'package:flutter/material.dart';
 /// that should rebuild when the form state changes.
 typedef StateWidgetBuilder<T extends AppForm> = Widget Function(T form);
 
+/// Type definition for update condition callback function.
+///
+/// This function receives a form instance and returns a boolean indicating
+/// whether the widget should rebuild in response to form state changes.
+typedef UpdateWhenCallback<T extends AppForm> = bool Function(T form);
+
 /// A widget that listens to form state changes and rebuilds accordingly.
 ///
 /// This widget automatically rebuilds whenever the form's state changes,
@@ -16,6 +22,7 @@ typedef StateWidgetBuilder<T extends AppForm> = Widget Function(T form);
 ///
 /// ## Key Features:
 /// - **Reactive Rebuilds**: Automatically rebuilds when form state changes
+/// - **Conditional Updates**: Optional [updateWhen] callback for performance optimization
 /// - **State Access**: Provides access to form's loading, error, success states
 /// - **Automatic Registration**: Registers itself with the form for updates
 /// - **Type Safety**: Generic type parameter ensures compile-time type checking
@@ -29,7 +36,21 @@ typedef StateWidgetBuilder<T extends AppForm> = Widget Function(T form);
 ///
 /// ## Usage:
 /// ```dart
+/// // Basic usage - rebuilds on any form state change
 /// AppFormListener<LoginForm>(
+///   builder: (form) {
+///     return ElevatedButton(
+///       onPressed: form.progressing ? null : form.submit,
+///       child: form.progressing
+///         ? CircularProgressIndicator()
+///         : Text('Login'),
+///     );
+///   },
+/// )
+///
+/// // With updateWhen - only rebuilds when specific conditions are met
+/// AppFormListener<LoginForm>(
+///   updateWhen: (form) => form.progressing || form.hasErrors,
 ///   builder: (form) {
 ///     return Column(
 ///       children: [
@@ -41,8 +62,6 @@ typedef StateWidgetBuilder<T extends AppForm> = Widget Function(T form);
 ///         ),
 ///         if (form.hasErrors)
 ///           Text('Please fix errors above', style: TextStyle(color: Colors.red)),
-///         if (form.success)
-///           Text('Login successful!', style: TextStyle(color: Colors.green)),
 ///       ],
 ///     );
 ///   },
@@ -93,6 +112,36 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
   /// ```
   final StateWidgetBuilder<T> builder;
   
+  /// Optional callback to control when the widget should rebuild.
+  ///
+  /// This function is called before each potential rebuild to determine
+  /// if the widget should actually rebuild. If this callback returns `false`,
+  /// the rebuild is skipped, providing performance optimization for complex UIs.
+  ///
+  /// ## Parameters:
+  /// - [form]: The current form instance with updated state
+  ///
+  /// ## Returns:
+  /// `true` if the widget should rebuild, `false` to skip the rebuild
+  ///
+  /// ## Performance Benefits:
+  /// - Prevents unnecessary rebuilds when irrelevant state changes
+  /// - Reduces widget tree rebuilds for better performance
+  /// - Allows fine-grained control over rebuild conditions
+  ///
+  /// ## Example:
+  /// ```dart
+  /// // Only rebuild when form is progressing or has errors
+  /// updateWhen: (form) => form.progressing || form.hasErrors,
+  ///
+  /// // Only rebuild when specific field values change
+  /// updateWhen: (form) => form.email.value != _lastEmailValue,
+  ///
+  /// // Only rebuild during form submission states
+  /// updateWhen: (form) => form.progressing || form.success,
+  /// ```
+  final UpdateWhenCallback<T>? updateWhen;
+  
   /// Creates an [AppFormListener] widget.
   ///
   /// The constructor automatically registers this listener with the form
@@ -101,14 +150,26 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
   /// ## Parameters:
   /// - [key]: Widget key for the listener
   /// - [builder]: Function that builds the reactive UI (required)
+  /// - [updateWhen]: Optional callback to control when rebuilds occur
   ///
   /// ## Example:
   /// ```dart
+  /// // Basic listener - rebuilds on any state change
   /// AppFormListener<RegistrationForm>(
   ///   builder: (form) => SubmitButton(form: form),
   /// )
+  ///
+  /// // Optimized listener - only rebuilds when needed
+  /// AppFormListener<RegistrationForm>(
+  ///   updateWhen: (form) => form.progressing || form.success,
+  ///   builder: (form) => SubmitButton(form: form),
+  /// )
   /// ```
-  AppFormListener({super.key, required this.builder}) {
+  AppFormListener({
+    super.key, 
+    required this.builder,
+    this.updateWhen,
+  }) {
     // Register this listener with the form for state change notifications
     AppForms.get<T>().listener = this;
   }
@@ -132,11 +193,12 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
     );
   }
 
-  /// Triggers a rebuild of this listener widget.
+  /// Triggers a rebuild of this listener widget if conditions are met.
   ///
   /// This method is called internally by the [AppForm] when its state changes.
-  /// It causes the [builder] function to be called again with the updated
-  /// form state, allowing the UI to reflect the current form state.
+  /// If an [updateWhen] callback is provided, it's evaluated first to determine
+  /// if the rebuild should proceed. This provides performance optimization by
+  /// preventing unnecessary rebuilds when irrelevant state changes occur.
   ///
   /// This method should not be called directly by user code - it's automatically
   /// called by the form when state changes occur.
@@ -148,7 +210,23 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
   /// - Loading state changes ([AppForm.setLoading])
   /// - Error state changes ([AppForm.setHasErrors])
   /// - Success state changes ([AppForm.setSuccess])
+  ///
+  /// ## Conditional Updates:
+  /// When [updateWhen] is provided:
+  /// 1. The callback is called with the current form state
+  /// 2. If it returns `true`, the widget rebuilds
+  /// 3. If it returns `false`, the rebuild is skipped
+  /// 4. If [updateWhen] is null, the widget always rebuilds
   void update() {
+    // Check if we should update based on the updateWhen callback
+    if (updateWhen != null) {
+      final form = AppForms.get<T>();
+      if (!updateWhen!(form)) {
+        // Skip rebuild if updateWhen returns false
+        return;
+      }
+    }
+    
     setState(() {
       // Empty setState call to trigger rebuild
       // The actual state is in the form instance

@@ -50,6 +50,7 @@ class LoginPage extends StatelessWidget {
               },
             ),
             AppFormListener<LoginForm>(
+              updateWhen: (form) => form.email.value != null,
               builder: (form) {
                 return ElevatedButton(
                     onPressed: form.progressing
