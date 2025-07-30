@@ -26,8 +26,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  app_forms: ^0.6.0
-  flutter_form_builder: ^10.1.0
+  app_forms: ^0.7.0
   form_builder_validators: ^11.2.0
 ```
 
