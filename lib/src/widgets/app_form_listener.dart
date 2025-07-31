@@ -13,6 +13,15 @@ typedef StateWidgetBuilder<T extends AppForm> = Widget Function(T form);
 /// whether the widget should rebuild in response to form state changes.
 typedef UpdateWhenCallback<T extends AppForm> = bool Function(T form);
 
+/// Interface for objects that can receive form state updates.
+///
+/// This interface ensures type safety when the form needs to notify
+/// listeners about state changes.
+abstract class AppFormListenerInterface {
+  /// Called when the form state changes and the listener should update.
+  void update();
+}
+
 /// A widget that listens to form state changes and rebuilds accordingly.
 ///
 /// This widget automatically rebuilds whenever the form's state changes,
@@ -77,7 +86,7 @@ typedef UpdateWhenCallback<T extends AppForm> = bool Function(T form);
 ///
 /// ## Type Parameter:
 /// - [T]: The form class type (must extend [AppForm])
-class AppFormListener<T extends AppForm> extends StatelessWidget {
+class AppFormListener<T extends AppForm> extends StatefulWidget {
   /// The builder function that creates the reactive UI.
   ///
   /// This function receives the form instance and should return a widget
@@ -165,32 +174,43 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
   ///   builder: (form) => SubmitButton(form: form),
   /// )
   /// ```
-  AppFormListener({
+  const AppFormListener({
     super.key, 
     required this.builder,
     this.updateWhen,
-  }) {
-    // Register this listener with the form for state change notifications
-    AppForms.get<T>().listener = this;
+  });
+
+  @override
+  State<AppFormListener<T>> createState() => _AppFormListenerState<T>();
+}
+
+class _AppFormListenerState<T extends AppForm> extends State<AppFormListener<T>> implements AppFormListenerInterface {
+  @override
+  void initState() {
+    super.initState();
+    // Defer listener registration until after the first build to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppForms.get<T>().listener = this;
+      }
+    });
   }
-  /// Internal setState function provided by StatefulBuilder.
-  ///
-  /// This function is used to trigger rebuilds when the form state changes.
-  /// It's automatically set by the StatefulBuilder widget.
-  late void Function(void Function()) setState;
+
+  @override
+  void dispose() {
+    // Unregister this listener to prevent memory leaks
+    final form = AppForms.get<T>();
+    if (form.listener == this) {
+      form.listener = null;
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StatefulBuilder(
-      builder: (context, void Function(void Function()) setState) {
-        // Store the setState function for later use in update()
-        this.setState = setState;
-        
-        // Get the form instance and build the UI
-        final form = AppForms.get<T>();
-        return builder(form);
-      },
-    );
+    // Get the form instance and build the UI
+    final form = AppForms.get<T>();
+    return widget.builder(form);
   }
 
   /// Triggers a rebuild of this listener widget if conditions are met.
@@ -217,11 +237,15 @@ class AppFormListener<T extends AppForm> extends StatelessWidget {
   /// 2. If it returns `true`, the widget rebuilds
   /// 3. If it returns `false`, the rebuild is skipped
   /// 4. If [updateWhen] is null, the widget always rebuilds
+  @override
   void update() {
+    // Check if the widget is still mounted before attempting to setState
+    if (!mounted) return;
+    
     // Check if we should update based on the updateWhen callback
-    if (updateWhen != null) {
+    if (widget.updateWhen != null) {
       final form = AppForms.get<T>();
-      if (!updateWhen!(form)) {
+      if (!widget.updateWhen!(form)) {
         // Skip rebuild if updateWhen returns false
         return;
       }

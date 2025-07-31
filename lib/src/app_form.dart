@@ -1,5 +1,6 @@
 import 'package:app_forms/app_forms.dart';
 import 'package:app_forms/src/utils/debouncer.dart';
+import 'package:app_forms/src/widgets/app_form_listener.dart';
 import 'package:flutter/cupertino.dart';
 
 /// Abstract base class for all forms in the app_forms package.
@@ -100,7 +101,7 @@ abstract class AppForm {
   ///
   /// Used to trigger UI updates when form state changes.
   /// Automatically set by [AppFormListener] widgets.
-  AppFormListener? _listener;
+  AppFormListenerInterface? _listener;
 
   /// Initial values for form fields.
   ///
@@ -508,9 +509,12 @@ abstract class AppForm {
   /// to register themselves for form state change notifications.
   ///
   /// This should not be called directly by user code.
-  set listener(AppFormListener listener) {
+  set listener(AppFormListenerInterface? listener) {
     _listener = listener;
   }
+
+  /// Gets the current listener.
+  AppFormListenerInterface? get listener => _listener;
 
   /// Internal method that synchronizes field values and updates UI.
   ///

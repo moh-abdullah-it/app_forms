@@ -1,3 +1,18 @@
+## 0.7.1
+### 🐛 Critical Bug Fixes
+* **FIX**: Resolved "setState() called during build" error in AppFormListener
+* **FIX**: Fixed listener registration timing to prevent build-phase state changes
+* **FIX**: Moved form validation from build-time to action callbacks to prevent setState conflicts
+* **IMPROVEMENT**: Added proper widget lifecycle management with dispose() method
+* **IMPROVEMENT**: Enhanced type safety with AppFormListenerInterface
+* **IMPROVEMENT**: Added mounted checks to prevent memory leaks and unsafe state updates
+
+### 📋 Technical Details
+* Fixed AppFormListener registration timing using WidgetsBinding.instance.addPostFrameCallback()
+* Replaced build-time saveAndValidate() calls with hasErrors property checks
+* Updated example apps to follow best practices for form validation timing
+* Added proper cleanup in widget disposal to prevent memory leaks
+
 ## 0.7.0
 ### 🎉 Major Documentation & Architecture Improvements
 * **BREAKING**: Enhanced professional README with comprehensive feature documentation
